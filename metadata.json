@@ -1,0 +1,4 @@
+{
+  "name": "Life Insurance Intake Wizard",
+  "description": "A branched modal wizard for life insurance intake with sentiment analysis, local persistence, and agent routing logic."
+}
