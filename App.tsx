@@ -4,9 +4,65 @@ import { AppState, ViewState, AnswerRecord } from './types';
 import { Button } from './components/Button';
 import { Input } from './components/Input';
 import { ProgressBar } from './components/ProgressBar';
-import { ArrowLeft, Edit2, Phone, CheckCircle, AlertCircle, RefreshCcw } from 'lucide-react';
+import { ArrowLeft, Edit2, Phone, CheckCircle, AlertCircle, RefreshCcw, ChevronDown, Search } from 'lucide-react';
+import logoUrl from './logo.svg';
 
 // --- Components defined inline for file constraints, organized logically ---
+
+/**
+ * Global header bar (outside the modal)
+ */
+const SiteHeader: React.FC = () => {
+  const topLinks = ['Claims', 'Make a Payment', 'Contact Us'];
+  const mainLinks = ['Life Insurance', 'Retirement', 'Learn', 'Additional Services', 'About Us'];
+
+  return (
+    <header className="w-full shadow-sm">
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-6xl mx-auto px-6 h-12 flex items-center justify-between">
+          <div className="flex items-center h-full">
+            <button className="h-full px-4 text-sm font-semibold text-white bg-brand-primary rounded-t-lg">
+              Individual
+            </button>
+            <button className="h-full px-4 text-sm font-semibold text-brand-primary hover:text-brand-secondary transition-colors">
+              Financial Professional
+            </button>
+          </div>
+          <div className="hidden md:flex items-center gap-6 text-sm font-semibold text-brand-primary">
+            {topLinks.map((label) => (
+              <a key={label} href="#" className="hover:text-brand-secondary">
+                {label}
+              </a>
+            ))}
+            <span className="h-5 w-px bg-gray-300" aria-hidden="true" />
+            <button className="flex items-center gap-1 hover:text-brand-secondary">
+              Log in <ChevronDown size={14} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-brand-primary text-white">
+        <div className="max-w-6xl mx-auto px-6 h-16 md:h-20 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src={logoUrl} alt="Protective logo" className="h-10 md:h-12 w-auto" />
+          </div>
+          <nav className="hidden md:flex items-center gap-6 text-sm font-semibold">
+            {mainLinks.map((label) => (
+              <a key={label} href="#" className="flex items-center gap-1 hover:text-brand-highlight transition-colors">
+                <span>{label}</span>
+                <ChevronDown size={14} className="opacity-80" />
+              </a>
+            ))}
+            <button className="hover:text-brand-highlight transition-colors flex items-center gap-1" aria-label="Search">
+              <Search size={16} />
+            </button>
+          </nav>
+        </div>
+      </div>
+    </header>
+  );
+};
 
 /**
  * Screen: The Wizard Modal
@@ -42,7 +98,10 @@ const WizardScreen: React.FC<{
   const totalStepsEst = 10; // Estimated for UI visualization
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div
+      className="flex items-center justify-center p-4"
+      style={{ minHeight: 'calc(100vh - 180px)' }}
+    >
       <div className="w-full max-w-3xl bg-white rounded-xl shadow-xl p-8 md:p-10 relative border-t-4 border-brand-primary">
         
         {/* Header / Nav */}
@@ -109,7 +168,10 @@ const ReviewScreen: React.FC<{
   onEdit: (nodeId: string) => void;
 }> = ({ answers, history, onSubmit, onEdit }) => {
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div
+      className="flex items-center justify-center p-4"
+      style={{ minHeight: 'calc(100vh - 180px)' }}
+    >
       <div className="w-full max-w-3xl bg-white rounded-xl shadow-xl p-8 md:p-10 border-t-4 border-brand-primary">
         <h2 className="text-3xl font-bold text-brand-text mb-2">Review your information</h2>
         <p className="text-brand-textSecondary mb-8">Please check your answers before submitting.</p>
@@ -153,7 +215,10 @@ const AgentExitScreen: React.FC<{ onFinish: () => void; onRestart: () => void }>
   const [contactMethod, setContactMethod] = useState('');
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div
+      className="flex items-center justify-center p-4"
+      style={{ minHeight: 'calc(100vh - 180px)' }}
+    >
       <div className="w-full max-w-2xl bg-white rounded-xl shadow-xl p-8 md:p-12 text-center border-t-4 border-brand-primary">
         <div className="w-16 h-16 bg-brand-highlight/30 rounded-full flex items-center justify-center mx-auto mb-6 text-brand-primary">
           <Phone size={32} />
@@ -196,7 +261,10 @@ const AgentExitScreen: React.FC<{ onFinish: () => void; onRestart: () => void }>
  */
 const ThankYouScreen: React.FC<{ onRestart: () => void }> = ({ onRestart }) => {
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div
+      className="flex items-center justify-center p-4"
+      style={{ minHeight: 'calc(100vh - 180px)' }}
+    >
       <div className="w-full max-w-xl bg-white rounded-xl shadow-xl p-8 md:p-12 text-center border-t-4 border-brand-primary">
         <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 text-green-600">
           <CheckCircle size={40} />
@@ -368,41 +436,49 @@ const App: React.FC = () => {
     setState(prev => ({ ...prev, view: 'THANK_YOU' }));
   };
 
-  // Render View Switcher
-  switch (state.view) {
-    case 'WIZARD':
-      return (
-        <WizardScreen 
-          nodeId={state.currentNodeId}
-          prevAnswer={state.answers[state.currentNodeId]?.answer || ''}
-          stepNumber={state.history.length + 1}
-          onNext={handleNext}
-          onBack={handleBack}
-          canGoBack={state.history.length > 0}
-          onRestart={handleRestart}
-        />
-      );
-    case 'REVIEW':
-      return (
-        <ReviewScreen 
-          answers={state.answers}
-          history={state.history}
-          onSubmit={handleReviewSubmit}
-          onEdit={handleEdit}
-        />
-      );
-    case 'AGENT_EXIT':
-      return (
-        <AgentExitScreen 
-          onFinish={() => setState(prev => ({ ...prev, view: 'THANK_YOU' }))} 
-          onRestart={handleRestart}
-        />
-      );
-    case 'THANK_YOU':
-      return <ThankYouScreen onRestart={handleRestart} />;
-    default:
-      return <div>Error: Unknown state</div>;
-  }
+  const renderView = () => {
+    switch (state.view) {
+      case 'WIZARD':
+        return (
+          <WizardScreen 
+            nodeId={state.currentNodeId}
+            prevAnswer={state.answers[state.currentNodeId]?.answer || ''}
+            stepNumber={state.history.length + 1}
+            onNext={handleNext}
+            onBack={handleBack}
+            canGoBack={state.history.length > 0}
+            onRestart={handleRestart}
+          />
+        );
+      case 'REVIEW':
+        return (
+          <ReviewScreen 
+            answers={state.answers}
+            history={state.history}
+            onSubmit={handleReviewSubmit}
+            onEdit={handleEdit}
+          />
+        );
+      case 'AGENT_EXIT':
+        return (
+          <AgentExitScreen 
+            onFinish={() => setState(prev => ({ ...prev, view: 'THANK_YOU' }))} 
+            onRestart={handleRestart}
+          />
+        );
+      case 'THANK_YOU':
+        return <ThankYouScreen onRestart={handleRestart} />;
+      default:
+        return <div className="p-6 text-center text-red-600">Error: Unknown state</div>;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-brand-background">
+      <SiteHeader />
+      {renderView()}
+    </div>
+  );
 };
 
 export default App;
