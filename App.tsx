@@ -98,10 +98,7 @@ const WizardScreen: React.FC<{
   const totalStepsEst = 10; // Estimated for UI visualization
 
   return (
-    <div
-      className="flex items-center justify-center p-4"
-      style={{ minHeight: 'calc(100vh - 180px)' }}
-    >
+    <div className="flex items-center justify-center p-4 min-h-[calc(100vh-180px)]">
       <div className="w-full max-w-3xl bg-white rounded-xl shadow-xl p-8 md:p-10 relative border-t-4 border-brand-primary">
         
         {/* Header / Nav */}
@@ -168,10 +165,7 @@ const ReviewScreen: React.FC<{
   onEdit: (nodeId: string) => void;
 }> = ({ answers, history, onSubmit, onEdit }) => {
   return (
-    <div
-      className="flex items-center justify-center p-4"
-      style={{ minHeight: 'calc(100vh - 180px)' }}
-    >
+    <div className="flex items-center justify-center p-4 min-h-[calc(100vh-180px)]">
       <div className="w-full max-w-3xl bg-white rounded-xl shadow-xl p-8 md:p-10 border-t-4 border-brand-primary">
         <h2 className="text-3xl font-bold text-brand-text mb-2">Review your information</h2>
         <p className="text-brand-textSecondary mb-8">Please check your answers before submitting.</p>
@@ -215,10 +209,7 @@ const AgentExitScreen: React.FC<{ onFinish: () => void; onRestart: () => void }>
   const [contactMethod, setContactMethod] = useState('');
 
   return (
-    <div
-      className="flex items-center justify-center p-4"
-      style={{ minHeight: 'calc(100vh - 180px)' }}
-    >
+    <div className="flex items-center justify-center p-4 min-h-[calc(100vh-180px)]">
       <div className="w-full max-w-2xl bg-white rounded-xl shadow-xl p-8 md:p-12 text-center border-t-4 border-brand-primary">
         <div className="w-16 h-16 bg-brand-highlight/30 rounded-full flex items-center justify-center mx-auto mb-6 text-brand-primary">
           <Phone size={32} />
@@ -261,10 +252,7 @@ const AgentExitScreen: React.FC<{ onFinish: () => void; onRestart: () => void }>
  */
 const ThankYouScreen: React.FC<{ onRestart: () => void }> = ({ onRestart }) => {
   return (
-    <div
-      className="flex items-center justify-center p-4"
-      style={{ minHeight: 'calc(100vh - 180px)' }}
-    >
+    <div className="flex items-center justify-center p-4 min-h-[calc(100vh-180px)]">
       <div className="w-full max-w-xl bg-white rounded-xl shadow-xl p-8 md:p-12 text-center border-t-4 border-brand-primary">
         <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 text-green-600">
           <CheckCircle size={40} />

@@ -1,4 +1,5 @@
 import React from 'react';
+import './progress.css';
 
 interface ProgressBarProps {
   current: number;
@@ -15,12 +16,12 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ current, total }) => {
         <span>Step {current}</span>
         <span>Life Insurance Intake</span>
       </div>
-      <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-        <div 
-          className="bg-brand-primary h-1.5 rounded-full transition-all duration-500 ease-out" 
-          style={{ width: `${percentage}%` }}
-        />
-      </div>
+      <progress
+        className="progress-bar"
+        value={percentage}
+        max={100}
+        aria-label={`Step ${current} of ${total}`}
+      />
     </div>
   );
 };
