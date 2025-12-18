@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { KEYWORDS_AGENT, QUESTION_TREE, INITIAL_NODE_ID, STORAGE_KEY } from './constants';
-import { AppState, ViewState, AnswerRecord } from './types';
+import { getEligibleNodeIds, getNextNodeId, getNodeById, INITIAL_NODE_ID, STORAGE_KEY } from './constants';
+import { AppState, AnswerRecord, FlowNode } from './types';
 import { Button } from './components/Button';
 import { Input } from './components/Input';
 import { ProgressBar } from './components/ProgressBar';
-import { ArrowLeft, Edit2, Phone, CheckCircle, AlertCircle, RefreshCcw, ChevronDown, Search } from 'lucide-react';
+import { ArrowLeft, Edit2, Phone, CheckCircle, RefreshCcw, ChevronDown, Search } from 'lucide-react';
 import logoUrl from './logo.svg';
 
 // --- Components defined inline for file constraints, organized logically ---
@@ -68,34 +68,68 @@ const SiteHeader: React.FC = () => {
  * Screen: The Wizard Modal
  */
 const WizardScreen: React.FC<{
-  nodeId: string;
+  node: FlowNode;
   prevAnswer: string;
   stepNumber: number;
+  totalSteps: number;
   onNext: (answer: string) => void;
   onBack: () => void;
   canGoBack: boolean;
   onRestart: () => void;
-}> = ({ nodeId, prevAnswer, stepNumber, onNext, onBack, canGoBack, onRestart }) => {
-  const node = QUESTION_TREE[nodeId];
+}> = ({ node, prevAnswer, stepNumber, totalSteps, onNext, onBack, canGoBack, onRestart }) => {
   const [value, setValue] = useState(prevAnswer || '');
+  const [error, setError] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Sync state when node changes (handles clearing input or loading previous answer) and focus
   useEffect(() => {
     setValue(prevAnswer || '');
+    setError('');
     if (inputRef.current) {
       inputRef.current.focus();
     }
-  }, [nodeId, prevAnswer]);
+  }, [node.id, prevAnswer]);
 
   // Handle Enter key
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && value.trim()) {
-      onNext(value);
+    if (e.key === 'Enter') {
+      handleSubmit();
     }
   };
 
-  const totalStepsEst = 10; // Estimated for UI visualization
+  const isBoolean = node.answer_type === 'boolean';
+  const isDate = node.answer_type === 'date';
+  const isInteger = node.answer_type === 'integer';
+  const isDecimal = node.answer_type === 'decimal';
+
+  const validateAnswer = (input: string) => {
+    const trimmed = input.trim();
+    if (isBoolean) {
+      return trimmed === 'Yes' || trimmed === 'No' ? '' : 'Please select Yes or No.';
+    }
+    if (!trimmed) return 'Please enter a response.';
+    if (isInteger) {
+      return /^-?\d+$/.test(trimmed) ? '' : 'Please enter a whole number.';
+    }
+    if (isDecimal) {
+      return Number.isNaN(Number(trimmed)) ? 'Please enter a number.' : '';
+    }
+    if (isDate) {
+      const timestamp = Date.parse(trimmed);
+      return Number.isNaN(timestamp) ? 'Please enter a valid date.' : '';
+    }
+    return '';
+  };
+
+  const handleSubmit = () => {
+    const validation = validateAnswer(value);
+    if (validation) {
+      setError(validation);
+      return;
+    }
+    setError('');
+    onNext(value.trim());
+  };
 
   return (
     <div className="flex items-center justify-center p-4 min-h-[calc(100vh-180px)]">
@@ -113,36 +147,71 @@ const WizardScreen: React.FC<{
            </button>
         </div>
 
-        <ProgressBar current={stepNumber} total={totalStepsEst} />
+        <ProgressBar current={stepNumber} total={totalSteps} />
 
         {/* Question Content */}
         <div className="mb-8">
+          <p className="text-xs font-bold uppercase tracking-widest text-brand-textSecondary mb-3">
+            {node.section}
+          </p>
           <h2 className="text-3xl md:text-4xl font-bold text-brand-text mb-4 leading-tight">
             {node.question}
           </h2>
-          {node.helperText && (
-            <p className="text-brand-textSecondary text-lg">
-              {node.helperText}
-            </p>
-          )}
         </div>
 
         {/* Input Area */}
         <div className="mb-10">
-          <Input 
-            ref={inputRef}
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={node.placeholder || "Type your answer here..."}
-            autoComplete="off"
-          />
+          {isBoolean ? (
+            <div>
+              <div className="flex flex-wrap gap-4">
+                <Button
+                  type="button"
+                  variant={value === 'Yes' ? 'primary' : 'secondary'}
+                  className="min-w-[120px]"
+                  onClick={() => {
+                    setValue('Yes');
+                    setError('');
+                  }}
+                >
+                  Yes
+                </Button>
+                <Button
+                  type="button"
+                  variant={value === 'No' ? 'primary' : 'secondary'}
+                  className="min-w-[120px]"
+                  onClick={() => {
+                    setValue('No');
+                    setError('');
+                  }}
+                >
+                  No
+                </Button>
+              </div>
+              {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+            </div>
+          ) : (
+            <Input 
+              ref={inputRef}
+              value={value}
+              onChange={(e) => {
+                setValue(e.target.value);
+                if (error) setError('');
+              }}
+              onKeyDown={handleKeyDown}
+              type={isDate ? 'date' : isInteger || isDecimal ? 'number' : 'text'}
+              inputMode={isInteger ? 'numeric' : isDecimal ? 'decimal' : undefined}
+              step={isInteger ? 1 : isDecimal ? 'any' : undefined}
+              placeholder="Type your answer here..."
+              autoComplete="off"
+              error={error}
+            />
+          )}
         </div>
 
         {/* Footer Actions */}
         <div className="flex justify-end">
           <Button 
-            onClick={() => onNext(value)} 
+            onClick={handleSubmit} 
             disabled={!value.trim()}
             className="w-full md:w-auto min-w-[140px]"
           >
@@ -177,6 +246,7 @@ const ReviewScreen: React.FC<{
             return (
               <div key={nodeId} className="flex flex-col md:flex-row md:justify-between md:items-start py-4 border-b border-gray-100 group">
                 <div className="flex-1 pr-4">
+                  <p className="text-xs font-bold text-brand-textSecondary uppercase tracking-wider mb-1">{record.section}</p>
                   <p className="text-sm font-bold text-brand-textSecondary uppercase tracking-wider mb-1">Question {idx + 1}</p>
                   <p className="text-brand-text font-semibold mb-1">{record.question}</p>
                   <p className="text-brand-primary text-lg">{record.answer}</p>
@@ -301,74 +371,51 @@ const App: React.FC = () => {
   }, [state]);
 
   const handleNext = (answerText: string) => {
-    const currentNode = QUESTION_TREE[state.currentNodeId];
-    
-    // Determine next step ID
-    let nextId = '';
-    try {
-      nextId = currentNode.next(answerText);
-    } catch (e) {
-      console.warn("Error in node logic, defaulting to fallback or agent", e);
-      nextId = 'AGENT'; // Fallback
+    const currentNode = getNodeById(state.currentNodeId);
+    if (!currentNode) {
+      console.warn('Missing flow node for current ID.', state.currentNodeId);
+      return;
     }
 
-    // Logic: Handling Unclear Answers
-    // For this demo, we assume the `next` function in constants.ts handles simple branching.
-    // However, if the `next` function returns the SAME id (loop), we count it as unclear.
-    // Or if we specifically route to a generic 'clarification' logic (not fully implemented in tree for brevity, assuming tree handles it).
-    // Let's implement a "repeated answer" check or just trust the tree.
-    // We will trust the tree's returned ID.
-
-    let newUnclearCount = state.unclearCount;
-    // Heuristic: if user input is very short and nextId is a clarification node? 
-    // Simplified: The prompt says "User repeatedly gives unusable answers (e.g. 2 clarifications) -> Agent".
-    // We'll simulate this: if the returned nextId contains "clarification", increment count.
-    if (nextId.includes('clarification')) {
-      newUnclearCount++;
-    } else {
-      newUnclearCount = 0;
-    }
-
-    if (newUnclearCount >= 2) {
-      nextId = 'AGENT';
-    }
-
-    // Update State
-    const newAnswers = {
+    const newAnswers: Record<string, AnswerRecord> = {
       ...state.answers,
       [state.currentNodeId]: {
         nodeId: state.currentNodeId,
         question: currentNode.question,
-        answer: answerText
+        answer: answerText,
+        section: currentNode.section,
+        answerType: currentNode.answer_type
       }
     };
 
-    if (nextId === 'AGENT') {
+    const eligibleIds = getEligibleNodeIds(newAnswers);
+    const eligibleSet = new Set(eligibleIds);
+    const filteredAnswers = Object.fromEntries(
+      Object.entries(newAnswers).filter(([nodeId]) => eligibleSet.has(nodeId))
+    ) as Record<string, AnswerRecord>;
+
+    const nextId = getNextNodeId(state.currentNodeId, filteredAnswers);
+    const nextHistory = [...state.history, state.currentNodeId].filter((nodeId) => eligibleSet.has(nodeId));
+
+    if (!nextId) {
       setState(prev => ({
         ...prev,
-        answers: newAnswers,
-        view: 'AGENT_EXIT',
-        unclearCount: newUnclearCount
-      }));
-    } else if (nextId === 'REVIEW') {
-      // Add current node to history before review so it shows up
-      setState(prev => ({
-        ...prev,
-        answers: newAnswers,
-        history: [...prev.history, prev.currentNodeId],
+        answers: filteredAnswers,
+        history: nextHistory,
         view: 'REVIEW',
         unclearCount: 0
       }));
-    } else {
-      // Proceed to next wizard step
-      setState(prev => ({
-        ...prev,
-        answers: newAnswers,
-        history: [...prev.history, prev.currentNodeId],
-        currentNodeId: nextId,
-        unclearCount: newUnclearCount
-      }));
+      return;
     }
+
+    setState(prev => ({
+      ...prev,
+      answers: filteredAnswers,
+      history: nextHistory,
+      currentNodeId: nextId,
+      view: 'WIZARD',
+      unclearCount: 0
+    }));
   };
 
   const handleBack = () => {
@@ -411,12 +458,18 @@ const App: React.FC = () => {
     // The history stack represents "past" steps. The "current" step is not in history.
     // So if we go to targetNodeId, the new history should be history.slice(0, targetIndex).
     const newHistory = state.history.slice(0, targetIndex);
+    const allowedIds = new Set([...newHistory, targetNodeId]);
+    const prunedAnswers = Object.fromEntries(
+      Object.entries(state.answers).filter(([nodeId]) => allowedIds.has(nodeId))
+    ) as Record<string, AnswerRecord>;
 
     setState(prev => ({
       ...prev,
       view: 'WIZARD',
       currentNodeId: targetNodeId,
-      history: newHistory
+      history: newHistory,
+      answers: prunedAnswers,
+      unclearCount: 0
     }));
   };
 
@@ -424,14 +477,24 @@ const App: React.FC = () => {
     setState(prev => ({ ...prev, view: 'THANK_YOU' }));
   };
 
+  const eligibleNodeIds = getEligibleNodeIds(state.answers);
+  const stepIndex = eligibleNodeIds.indexOf(state.currentNodeId);
+  const stepNumber = stepIndex >= 0 ? stepIndex + 1 : state.history.length + 1;
+  const totalSteps = Math.max(stepNumber, eligibleNodeIds.length);
+  const currentNode = getNodeById(state.currentNodeId);
+
   const renderView = () => {
     switch (state.view) {
       case 'WIZARD':
+        if (!currentNode) {
+          return <div className="p-6 text-center text-red-600">Error: Missing question data</div>;
+        }
         return (
           <WizardScreen 
-            nodeId={state.currentNodeId}
+            node={currentNode}
             prevAnswer={state.answers[state.currentNodeId]?.answer || ''}
-            stepNumber={state.history.length + 1}
+            stepNumber={stepNumber}
+            totalSteps={totalSteps}
             onNext={handleNext}
             onBack={handleBack}
             canGoBack={state.history.length > 0}

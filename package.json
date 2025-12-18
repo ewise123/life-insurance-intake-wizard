@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "bundle:standalone": "esbuild index.tsx --bundle --format=esm --platform=browser --target=es2022 --jsx=automatic --outfile=bundle.js --loader:.ts=ts --loader:.tsx=tsx --loader:.svg=dataurl --minify"
+    "bundle:standalone": "esbuild index.tsx --bundle --format=esm --platform=browser --target=es2022 --jsx=automatic --outfile=bundle.js --loader:.ts=ts --loader:.tsx=tsx --loader:.svg=dataurl --loader:.json=json --minify"
   },
   "dependencies": {
     "lucide-react": "^0.561.0",

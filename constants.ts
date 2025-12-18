@@ -1,130 +1,177 @@
-import { QuestionNode } from './types';
+import flowData from './data/flows/new-flow.json';
+import { AnswerRecord, FlowDefinition, FlowNode } from './types';
 
-// --- NLP / Normalization Helpers ---
+export const STORAGE_KEY = 'life_intake_state_v2';
 
-const normalize = (str: string) => str.toLowerCase().trim();
+export const FLOW_DEFINITION = flowData as FlowDefinition;
 
-const KEYWORDS_AGENT = ['agent', 'human', 'person', 'representative', 'call me', 'speak to someone'];
-const KEYWORDS_HIGH_RISK = [
-  'cancer', 'heart attack', 'stroke', 'hospital', 'severe', 'terminal', 
-  'diabetes', 'dialysis', 'transplant', 'hiv', 'aids'
-];
-const KEYWORDS_HIGH_VALUE = ['2m', 'million', 'multi-million', '2,000,000', 'unlimited'];
+const nodesById = new Map<string, FlowNode>();
+FLOW_DEFINITION.nodes.forEach((node) => {
+  nodesById.set(node.id, node);
+});
 
-const checkKeywords = (input: string, keywords: string[]) => {
-  const norm = normalize(input);
-  return keywords.some(kw => norm.includes(kw));
+const buildFlowOrder = () => {
+  const ordered: string[] = [];
+  const seen = new Set<string>();
+
+  FLOW_DEFINITION.root_nodes.forEach((rootId) => {
+    if (!seen.has(rootId)) {
+      ordered.push(rootId);
+      seen.add(rootId);
+    }
+    const rootNode = nodesById.get(rootId);
+    rootNode?.children?.forEach((childId) => {
+      if (!seen.has(childId)) {
+        ordered.push(childId);
+        seen.add(childId);
+      }
+    });
+  });
+
+  return ordered;
 };
 
-// Simple yes/no parser
-const parseYesNo = (input: string): boolean | null => {
-  const norm = normalize(input);
-  if (['y', 'yes', 'yeah', 'yep', 'sure', 'ok'].some(w => norm.startsWith(w))) return true;
-  if (['n', 'no', 'nope', 'nah', 'none'].some(w => norm.startsWith(w))) return false;
+const FLOW_ORDER = buildFlowOrder();
+
+export const getNodeById = (id: string) => nodesById.get(id);
+
+export const getFlowOrder = () => FLOW_ORDER.slice();
+
+const parseBoolean = (value: string) => {
+  const normalized = value.trim().toLowerCase();
+  if (['true', 'yes', 'y'].includes(normalized)) return true;
+  if (['false', 'no', 'n'].includes(normalized)) return false;
   return null;
 };
 
-// --- Question Tree Definition ---
+const parseLiteral = (raw: string) => {
+  const trimmed = raw.trim();
+  if (trimmed === 'true') return true;
+  if (trimmed === 'false') return false;
+  const numeric = Number(trimmed);
+  if (!Number.isNaN(numeric) && /^-?\d+(\.\d+)?$/.test(trimmed)) {
+    return numeric;
+  }
+  return trimmed.replace(/^['"]|['"]$/g, '');
+};
 
-export const QUESTION_TREE: Record<string, QuestionNode> = {
-  start: {
-    id: 'start',
-    question: "Are you looking for coverage for yourself or someone else?",
-    helperText: "Most people start by insuring themselves.",
-    placeholder: "e.g., Myself, my spouse...",
-    next: (ans) => {
-      const norm = normalize(ans);
-      if (checkKeywords(ans, KEYWORDS_AGENT)) return 'AGENT';
-      // If it's for someone else, we might have different logic, but for this demo flow we merge back.
-      return 'reason'; 
+const parseAnswerValue = (node: FlowNode, answer: string) => {
+  const trimmed = answer.trim();
+  if (!trimmed) return null;
+
+  switch (node.answer_type) {
+    case 'boolean':
+      return parseBoolean(trimmed);
+    case 'integer': {
+      const value = Number.parseInt(trimmed, 10);
+      return Number.isNaN(value) ? null : value;
     }
-  },
-  reason: {
-    id: 'reason',
-    question: "What is your primary reason for seeking coverage?",
-    helperText: "e.g., Mortgage protection, Income replacement, Leaving a legacy.",
-    placeholder: "Type your reason...",
-    next: (ans) => {
-      if (checkKeywords(ans, KEYWORDS_AGENT)) return 'AGENT';
-      return 'coverage_goal';
+    case 'decimal': {
+      const value = Number.parseFloat(trimmed);
+      return Number.isNaN(value) ? null : value;
     }
-  },
-  coverage_goal: {
-    id: 'coverage_goal',
-    question: "Do you have a general coverage amount in mind?",
-    helperText: "Low ($50k-$250k), Medium ($250k-$1M), or High ($1M+).",
-    placeholder: "e.g., around 500k",
-    next: (ans) => {
-      if (checkKeywords(ans, KEYWORDS_HIGH_VALUE)) return 'AGENT'; // Trigger high value exit
-      if (checkKeywords(ans, KEYWORDS_AGENT)) return 'AGENT';
-      return 'timeline';
-    }
-  },
-  timeline: {
-    id: 'timeline',
-    question: "How soon are you looking to have this policy in place?",
-    helperText: "e.g., ASAP, within a month, just exploring.",
-    next: (ans) => {
-      if (checkKeywords(ans, KEYWORDS_AGENT)) return 'AGENT';
-      return 'tobacco';
-    }
-  },
-  tobacco: {
-    id: 'tobacco',
-    question: "Have you used any tobacco or nicotine products in the last 12 months?",
-    helperText: "Includes cigarettes, vaping, cigars, chewing tobacco.",
-    next: (ans) => {
-      const isYes = parseYesNo(ans);
-      if (isYes === null && !checkKeywords(ans, ['occasionally', 'rarely'])) return 'clarification_tobacco'; // Simple routing validation
-      return 'health';
-    }
-  },
-  clarification_tobacco: {
-    id: 'clarification_tobacco',
-    question: "Could you clarify your tobacco use?",
-    helperText: "Please answer with 'Yes', 'No', or 'Occasionally'.",
-    next: (ans) => {
-       // If still garbage, the main loop logic will catch 'unclearCount' and send to agent
-       return 'health';
-    }
-  },
-  health: {
-    id: 'health',
-    question: "How would you describe your general health?",
-    helperText: "Excellent, Good, Fair, or if you have specific conditions.",
-    next: (ans) => {
-      if (checkKeywords(ans, KEYWORDS_HIGH_RISK)) return 'AGENT';
-      if (checkKeywords(ans, KEYWORDS_AGENT)) return 'AGENT';
-      return 'existing_coverage';
-    }
-  },
-  existing_coverage: {
-    id: 'existing_coverage',
-    question: "Do you currently have any life insurance coverage?",
-    next: (ans) => {
-      return 'medical_exam';
-    }
-  },
-  medical_exam: {
-    id: 'medical_exam',
-    question: "Are you comfortable taking a free medical exam if required?",
-    helperText: "Some policies require a nurse visit; others are no-exam.",
-    next: (ans) => {
-      if (checkKeywords(ans, KEYWORDS_AGENT)) return 'AGENT';
-      return 'next_step_pref';
-    }
-  },
-  next_step_pref: {
-    id: 'next_step_pref',
-    question: "What is your preferred next step?",
-    helperText: "e.g., See estimated prices, Speak to an agent.",
-    next: (ans) => {
-      if (checkKeywords(ans, KEYWORDS_AGENT) || checkKeywords(ans, ['talk', 'speak', 'call'])) return 'AGENT';
-      return 'REVIEW'; // End of flow
-    }
+    case 'date':
+      return trimmed;
+    default:
+      return trimmed;
   }
 };
 
-export const INITIAL_NODE_ID = 'start';
-export const STORAGE_KEY = 'life_intake_state_v1';
-export { KEYWORDS_AGENT, KEYWORDS_HIGH_RISK, KEYWORDS_HIGH_VALUE };
+const getAnswerValue = (nodeId: string, answers: Record<string, AnswerRecord>) => {
+  const record = answers[nodeId];
+  if (!record) return null;
+  const node = nodesById.get(nodeId);
+  if (!node) return null;
+  return parseAnswerValue(node, record.answer);
+};
+
+const evaluateClause = (clause: string, answers: Record<string, AnswerRecord>) => {
+  const trimmed = clause.trim();
+  if (!trimmed) return false;
+  if (trimmed === 'true') return true;
+  if (trimmed === 'false') return false;
+
+  const containsMatch = trimmed.match(/^(.+?)\s+CONTAINS\s+(.+)$/i);
+  if (containsMatch) {
+    const leftId = containsMatch[1].trim();
+    const right = parseLiteral(containsMatch[2]);
+    const leftValue = getAnswerValue(leftId, answers);
+    if (leftValue === null || right === null) return false;
+    return String(leftValue).toLowerCase().includes(String(right).toLowerCase());
+  }
+
+  const compareMatch = trimmed.match(/^(.+?)\s*(==|>=|<=|>|<)\s*(.+)$/);
+  if (!compareMatch) return false;
+
+  const leftId = compareMatch[1].trim();
+  const operator = compareMatch[2];
+  const rightLiteral = parseLiteral(compareMatch[3]);
+  const leftValue = getAnswerValue(leftId, answers);
+
+  if (leftValue === null) return false;
+
+  const leftNumber = typeof leftValue === 'number' ? leftValue : Number(leftValue);
+  const rightNumber = typeof rightLiteral === 'number' ? rightLiteral : Number(rightLiteral);
+
+  const bothNumbers = !Number.isNaN(leftNumber) && !Number.isNaN(rightNumber);
+
+  if (operator === '==') {
+    return String(leftValue).toLowerCase() === String(rightLiteral).toLowerCase();
+  }
+
+  if (!bothNumbers) return false;
+
+  switch (operator) {
+    case '>':
+      return leftNumber > rightNumber;
+    case '>=':
+      return leftNumber >= rightNumber;
+    case '<':
+      return leftNumber < rightNumber;
+    case '<=':
+      return leftNumber <= rightNumber;
+    default:
+      return false;
+  }
+};
+
+export const evaluateTrigger = (trigger: string | undefined, answers: Record<string, AnswerRecord>) => {
+  if (!trigger) return false;
+  const trimmed = trigger.trim();
+  if (!trimmed) return false;
+
+  const orParts = trimmed.split(/\s+OR\s+/i);
+  return orParts.some((part) => {
+    const andParts = part.split(/\s+AND\s+/i);
+    return andParts.every((clause) => evaluateClause(clause, answers));
+  });
+};
+
+export const isNodeEligible = (node: FlowNode, answers: Record<string, AnswerRecord>) => {
+  if (node.type === 'gateway') return true;
+  return evaluateTrigger(node.trigger, answers);
+};
+
+export const getEligibleNodeIds = (answers: Record<string, AnswerRecord>) => {
+  return FLOW_ORDER.filter((nodeId) => {
+    const node = nodesById.get(nodeId);
+    return node ? isNodeEligible(node, answers) : false;
+  });
+};
+
+export const getNextNodeId = (currentId: string, answers: Record<string, AnswerRecord>) => {
+  const currentIndex = FLOW_ORDER.indexOf(currentId);
+  if (currentIndex === -1) return null;
+
+  for (let idx = currentIndex + 1; idx < FLOW_ORDER.length; idx += 1) {
+    const nextId = FLOW_ORDER[idx];
+    const node = nodesById.get(nextId);
+    if (node && isNodeEligible(node, answers)) {
+      return nextId;
+    }
+  }
+
+  return null;
+};
+
+export const INITIAL_NODE_ID = FLOW_DEFINITION.root_nodes[0] ?? '';

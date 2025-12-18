@@ -1,0 +1,48 @@
+Section,Question Type,Question,Triggered By,Annotated Added?
+Primary Medical Provider,Gateway,Do you have a primary medical provider?,,No
+Primary Medical Provider,Follow-on,Reason for last visit,Primary provider = Yes,No
+Primary Medical Provider,Follow-on,Date of last visit,Primary provider = Yes,No
+Primary Medical Provider,Follow-on,Results of last visit,Primary provider = Yes,No
+Primary Medical Provider,Follow-on,Treatment or medications prescribed,Primary provider = Yes,No
+Primary Medical Provider,Follow-on,Provider name,Primary provider = Yes,No
+Neurological,Gateway,Any disorder of brain or nervous system?,,No
+Neurological,Follow-on,Specific neurological condition,Neurological = Yes,Yes
+Neurological,Follow-on,Date of diagnosis and last symptoms,Neurological = Yes,Yes
+Neurological,Follow-on,Hospitalizations or functional limitations,Neurological = Yes,Yes
+Psychiatric,Gateway,Any psychiatric or mental disorder?,,No
+Psychiatric,Follow-on,Specific diagnosis,Psychiatric = Yes,No
+Psychiatric,Follow-on,Diagnosis date,Psychiatric = Yes,No
+Psychiatric,Follow-on,Current treatment or medication,Psychiatric = Yes,No
+Psychiatric,Follow-on,Medication changes in past 12 months,Psychiatric = Yes,Yes
+Psychiatric,Follow-on,Comorbid mental health conditions,Psychiatric = Yes,Yes
+Psychiatric,Follow-on,Substance abuse history,Psychiatric = Yes,Yes
+EENT,Gateway,Any disorder of eyes ears nose or throat?,,No
+EENT,Follow-on,Specific condition,EENT = Yes,Yes
+EENT,Follow-on,Corrected or treated?,EENT = Yes,Yes
+EENT,Follow-on,Functional impairment?,EENT = Yes,Yes
+Cardiovascular,Gateway,Any heart or circulatory disorder?,,No
+Cardiovascular,Follow-on,Diagnosis and date,Cardio = Yes,No
+Cardiovascular,Follow-on,Medication and control status,Cardio = Yes,No
+Cardiovascular,Follow-on,Duration of blood pressure control,Cardio = Yes,Yes
+Cardiovascular,Follow-on,Related conditions,Cardio = Yes,Yes
+Cardiovascular,Follow-on,Cardiac testing or hospitalizations,Cardio = Yes,Yes
+Respiratory,Gateway,Any respiratory disorder?,,No
+Respiratory,Follow-on,Specific condition,Respiratory = Yes,Yes
+Respiratory,Follow-on,Severity level,Respiratory = Yes,Yes
+Respiratory,Follow-on,Hospitalizations or oxygen use,Respiratory = Yes,Yes
+Digestive,Gateway,Any digestive disorder?,,No
+Digestive,Follow-on,Specific diagnosis,Digestive = Yes,Yes
+Digestive,Follow-on,Recent symptoms or bleeding,Digestive = Yes,Yes
+Digestive,Follow-on,Liver function abnormalities,Digestive = Yes,Yes
+Urinary,Gateway,Any urinary disorder?,,No
+Urinary,Follow-on,Specific condition,Urinary = Yes,Yes
+Urinary,Follow-on,Abnormal labs,Urinary = Yes,Yes
+Urinary,Follow-on,Hospitalizations or treatment,Urinary = Yes,Yes
+Endocrine,Gateway,Any endocrine disorder?,,No
+Endocrine,Follow-on,Specific condition,Endocrine = Yes,Yes
+Endocrine,Follow-on,Treatment and control,Endocrine = Yes,Yes
+Endocrine,Follow-on,Complications,Endocrine = Yes,Yes
+Cancer,Gateway,Any cancer or malignant disorder?,,No
+Cancer,Follow-on,Cancer type and diagnosis date,Cancer = Yes,Yes
+Cancer,Follow-on,Treatment completed date,Cancer = Yes,Yes
+Cancer,Follow-on,Recurrence or metastasis,Cancer = Yes,Yes
